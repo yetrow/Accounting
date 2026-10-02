@@ -28,7 +28,7 @@ aligned=build/'aligned.apk';run([tool('zipalign'),'-f','4',unsigned,aligned])
 key=ROOT/'signing'/'ledger-release.jks';password=ROOT/'signing'/'password.txt'
 if not key.exists() or not password.exists():sys.exit('Restore private signing files into signing/ first; see README.md')
 output=ROOT/'release';output.mkdir(exist_ok=True)
-apk=output/'Ledger-2.0.0.apk'
+apk=output/'Ledger-2.0.2.apk'
 run([tool('apksigner'),'sign','--ks',key,'--ks-key-alias','ledger','--ks-pass','file:'+str(password),'--out',apk,aligned])
 run([tool('apksigner'),'verify','--verbose','--print-certs',apk])
 print(apk)

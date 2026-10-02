@@ -19,6 +19,7 @@ export default function HomePage() {
   const [showSettings, setShowSettings] = useState(false);
   const [listDate, setListDate] = useState(todayStr());
   const [allDates, setAllDates] = useState(false);
+  const [listCategory, setListCategory] = useState<string | null>(null);
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState(categories[0]?.name ?? '餐饮');
   const [date, setDate] = useState(todayStr());
@@ -38,12 +39,13 @@ export default function HomePage() {
   const todayTotal = todayExpenses.reduce((s, e) => s + e.amount, 0);
 
   const valid = /^\d+(\.\d{1,2})?$/.test(amount) && parseFloat(amount) > 0 && validDate(date) && date <= todayStr();
-  const listedExpenses = useMemo(() => expenses.filter(e => allDates || e.date === listDate).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt),[expenses,allDates,listDate]);
+  const listedExpenses = useMemo(() => expenses.filter(e => (allDates || e.date === listDate) && (listCategory === null || e.category === listCategory)).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt),[expenses,allDates,listDate,listCategory]);
 
   const handleSave = () => {
     if (!valid) return;
     if (!addExpense({ amount: parseFloat(amount), category, note: note.trim() || undefined, date })) return;
     setListDate(date); setAllDates(false);
+    if (listCategory !== null) setListCategory(category);
     setAmount('');
     setNote('');
     setSaved(true);
@@ -65,7 +67,10 @@ export default function HomePage() {
 
   const commitRename = () => {
     if (renaming && renameVal.trim() && renameVal.trim() !== renaming) {
-      renameCategory(renaming, renameVal);
+      if (renameCategory(renaming, renameVal)) {
+        if (category === renaming) setCategory(renameVal.trim());
+        if (listCategory === renaming) setListCategory(renameVal.trim());
+      }
     }
     setRenaming(null);
   };
@@ -141,7 +146,10 @@ export default function HomePage() {
             ) : (
               <button
                 key={c.name}
-                onClick={() => (managing ? startRename(c.name) : setCategory(c.name))}
+                onClick={() => {
+                  if (managing) startRename(c.name);
+                  else { setCategory(c.name); setListCategory(c.name); }
+                }}
                 className={`relative px-3.5 py-1.5 rounded-full text-sm transition-colors duration-200 active:scale-95 ${
                   category === c.name && !managing
                     ? 'text-white shadow-sm'
@@ -262,15 +270,18 @@ export default function HomePage() {
       </div>
 
       <section className="mt-6" aria-label="账单流水">
-        <h2 className="text-base font-semibold mb-3">账单流水</h2>
+        <div className="flex items-start justify-between gap-3 mb-3">
+          <h2 className="text-base font-semibold min-w-0" style={{ overflowWrap: 'anywhere' }}>账单流水{listCategory !== null ? ` · ${listCategory}` : ''}</h2>
+          <button type="button" className="secondary shrink-0" aria-pressed={listCategory === null} onClick={() => setListCategory(null)}>全部分类</button>
+        </div>
         <div className="flex flex-wrap items-center gap-2 mb-3">
           <button className="secondary" onClick={()=>{const d=new Date();d.setDate(d.getDate()-1);setListDate(`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`);setAllDates(false);}}>昨天</button>
           <button className="secondary" onClick={()=>{setListDate(todayStr());setAllDates(false);}}>今天</button>
           <button className="secondary" onClick={()=>setAllDates(true)}>全部</button>
           <input aria-label="流水日期" className="min-w-0 rounded-xl bg-white px-2 py-2 text-sm" type="date" value={listDate} max={todayStr()} onChange={e=>{setListDate(e.target.value);setAllDates(false);}}/>
         </div>
-        <p className="text-xs text-[#8A8474] mb-2">{allDates?'全部日期':listDate} · {listedExpenses.length} 笔 · ¥{listedExpenses.reduce((sum,e)=>sum+Math.round(e.amount*100),0)/100}</p>
-        <ExpenseList expenses={listedExpenses}/>
+        <p className="text-xs text-[#8A8474] mb-2">{allDates?'全部日期':listDate} · {listedExpenses.length} 笔 · ¥{(listedExpenses.reduce((sum,e)=>sum+Math.round(e.amount*100),0)/100).toFixed(2)}</p>
+        <ExpenseList key={JSON.stringify([allDates,listDate,listCategory])} expenses={listedExpenses}/>
       </section>
     </div>
   );

@@ -29,3 +29,17 @@ button:focus-visible { outline: 2px solid #B36B56; outline-offset: 2px; }
 @keyframes page-enter { from {opacity: .65; transform: translateY(5px);} to {opacity: 1; transform: translateY(0);} }
 @media (max-width: 350px) { .page-content {padding: 14px 10px 24px;} .entry-fields {grid-template-columns: 1fr;} }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }
+
+.category-card { width: 100%; display: block; text-align: left; border: 2px solid transparent; border-radius: 16px; background: rgb(255 255 255 / .8); padding: 12px 14px; color: #2B2A24; }
+.category-card.is-selected { border-color: #E8927C; background: #FFF8F2; }
+.category-card-heading { display: flex; align-items: flex-start; gap: 10px; }
+.category-name { min-width: 0; flex: 1; white-space: normal; overflow-wrap: anywhere; font-size: 14px; font-weight: 600; }
+.category-values { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px; margin-top: 6px; padding-left: 22px; }
+.expense-donut { position: relative; width: 100%; margin: 12px 0; }
+.donut-connectors { position: absolute; inset: 0; pointer-events: none; }
+.donut-label { position: absolute; display: block; padding: 3px 2px; border: 0; background: #F7F3EB; border-radius: 5px; color: #514C40; font-size: 12px; line-height: 1.4; }
+.donut-label[aria-pressed="true"] { color: #8B432F; background: #FBE5DC; }
+.donut-label-name { display: block; white-space: normal; overflow-wrap: anywhere; font-weight: 600; }
+.donut-label-percent { display: block; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.donut-center { position: absolute; display: flex; flex-direction: column; justify-content: center; height: 50px; text-align: center; pointer-events: none; font-size: 11px; color: #8A8474; }
+.donut-center strong { color: #2B2A24; overflow-wrap: anywhere; line-height: 1.25; }

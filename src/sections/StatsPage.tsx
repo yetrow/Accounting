@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import ExpenseDonut from '@/components/ExpenseDonut';
+import { formatPercent } from '@/lib/chartFormat';
 import { useExpenses } from '@/hooks/useExpenses';
 import type { Period } from '@/types';
 import ExpenseList from './ExpenseList';
@@ -20,6 +21,16 @@ export default function StatsPage() {
   const { expenses, colorOf, budgets } = useExpenses();
   const [period, setPeriod] = useState<Period>('day');
   const [cursor, setCursor] = useState(() => new Date());
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const detailsRef = useRef<HTMLElement>(null);
+
+  const chooseCategory = (name: string) => {
+    setSelectedCategory(current => current === name ? null : name);
+    requestAnimationFrame(() => detailsRef.current?.scrollIntoView({
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+      block: 'start',
+    }));
+  };
 
   // 当前周期起止
   const [rangeStart, rangeEnd, label, isToday] = useMemo(() => {
@@ -48,6 +59,7 @@ export default function StatsPage() {
   }, [period, cursor]);
 
   const move = (dir: 1 | -1) => {
+    setSelectedCategory(null);
     setCursor((prev) => {
       const d = new Date(prev);
       if (period === 'day') d.setDate(d.getDate() + dir);
@@ -58,7 +70,7 @@ export default function StatsPage() {
   };
 
   // 聚合
-  const { rows, total } = useMemo(() => {
+  const { rows, total, inRange } = useMemo(() => {
     const inRange = expenses.filter((e) => e.date >= rangeStart && e.date <= rangeEnd);
     const map = new Map<string, number>();
     for (const e of inRange) map.set(e.category, (map.get(e.category) ?? 0) + e.amount);
@@ -71,8 +83,11 @@ export default function StatsPage() {
         color: colorOf(name),
       }))
       .sort((a, b) => b.value - a.value);
-    return { rows, total };
+    return { rows, total, inRange: inRange.sort((a,b) => b.date.localeCompare(a.date) || b.createdAt-a.createdAt) };
   }, [expenses, rangeStart, rangeEnd, colorOf]);
+
+  const filteredExpenses = selectedCategory === null ? inRange : inRange.filter(e => e.category === selectedCategory);
+  const filteredTotal = filteredExpenses.reduce((sum,e) => sum + Math.round(e.amount * 100),0) / 100;
 
   return (
     <div className="page-content">
@@ -81,7 +96,7 @@ export default function StatsPage() {
         {(['day', 'week', 'month'] as Period[]).map((p) => (
           <button
             key={p}
-            onClick={() => setPeriod(p)}
+            onClick={() => { setPeriod(p); setSelectedCategory(null); }}
             className={`flex-1 py-2 rounded-xl text-sm font-medium transition-colors duration-200 ${
               period === p ? 'bg-white text-[#2B2A24] shadow-sm' : 'text-[#8A8474]'
             }`}
@@ -99,7 +114,7 @@ export default function StatsPage() {
         <div className="text-center">
           <p className="text-sm font-semibold text-[#2B2A24]">{label}</p>
           {!isToday && (
-            <button onClick={() => setCursor(new Date())} className="text-xs text-[#E8927C]">
+            <button onClick={() => { setCursor(new Date()); setSelectedCategory(null); }} className="text-xs text-[#E8927C]">
               回到本期
             </button>
           )}
@@ -131,77 +146,53 @@ export default function StatsPage() {
         <p className="text-sm text-[#B5AE9C] py-14 text-center">这个周期还没有消费记录</p>
       ) : (
         <>
-          {/* 饼图 */}
-          <div className="relative h-72 mt-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={rows}
-                  dataKey="value"
-                  nameKey="name"
-                  innerRadius={62}
-                  outerRadius={82}
-                  paddingAngle={2}
-                  cornerRadius={6}
-                  strokeWidth={0}
-                  isAnimationActive={false}
-                  labelLine={{ stroke: '#C9C2B0', strokeWidth: 1 }}
-                  label={(props: { name?: string; percent?: number; x?: number; y?: number; textAnchor?: string }) => {
-                    const pct = (props.percent ?? 0) * 100;
-                    if (pct < 4) return <g />; // 太小的扇区不标，避免重叠
-                    return (
-                      <text
-                        x={props.x}
-                        y={props.y}
-                        textAnchor={props.textAnchor as 'start' | 'middle' | 'end'}
-                        dominantBaseline="central"
-                        className="fill-[#2B2A24]"
-                        fontSize={12}
-                      >
-                        {props.name} {pct.toFixed(0)}%
-                      </text>
-                    );
-                  }}
-                >
-                  {rows.map((r) => (
-                    <Cell key={r.name} fill={r.color} />
-                  ))}
-                </Pie>
-              </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <span className="text-xs text-[#8A8474]">共 {rows.length} 类</span>
-              <span className="text-lg font-bold tabular-nums text-[#2B2A24]">
-                ¥{total.toFixed(0)}
-              </span>
-            </div>
-          </div>
-
-          {/* 占比列表 */}
-          <ul className="mt-2 space-y-2">
-            {rows.map((r) => (
-              <li key={r.name} className="rounded-2xl bg-white/70 px-4 py-3">
-                <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: r.color }} />
-                  <span className="flex-1 text-sm font-medium text-[#2B2A24]">{r.name}</span>
-                  <span className="text-sm tabular-nums text-[#8A8474]">{r.pct.toFixed(1)}%</span>
-                  <span className="text-sm font-semibold tabular-nums text-[#2B2A24] w-20 text-right">
-                    ¥{r.value.toFixed(2)}
-                  </span>
-                </div>
-                <div className="mt-2 h-1.5 rounded-full bg-[#F3EFE4] overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-colors duration-500"
-                    style={{ width: `${r.pct}%`, backgroundColor: r.color }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
+          <figure className="mt-2" aria-label="本期支出分类占比">
+            <ExpenseDonut rows={rows} total={total} selectedCategory={selectedCategory} onSelect={chooseCategory} />
+            <figcaption className="text-center text-xs text-[#8A8474] mb-3">
+              点击图中分类、扇区或下方分类，查看对应流水
+            </figcaption>
+            {/* HTML 图例允许换行，所有分类都显示，不再省略小于 4% 的分类。 */}
+            <ul className="space-y-2" aria-label="完整分类与占比">
+              {rows.map(r => (
+                <li key={r.name}>
+                  <button
+                    type="button"
+                    className={`category-card ${selectedCategory === r.name ? 'is-selected' : ''}`}
+                    aria-label={`筛选${r.name}`}
+                    aria-pressed={selectedCategory === r.name}
+                    onClick={() => chooseCategory(r.name)}
+                  >
+                    <span className="category-card-heading">
+                      <span className="w-3 h-3 rounded-full shrink-0 mt-1" style={{ backgroundColor: r.color }} />
+                      <span className="category-name">{r.name}</span>
+                      {selectedCategory === r.name && <span className="text-xs text-[#9A543F] shrink-0">已筛选</span>}
+                    </span>
+                    <span className="category-values">
+                      <span className="text-sm tabular-nums text-[#8A8474]">{formatPercent(r.pct)}</span>
+                      <span className="text-sm font-semibold tabular-nums">¥{r.value.toFixed(2)}</span>
+                    </span>
+                    <span className="block mt-2 h-1.5 rounded-full bg-[#F3EFE4] overflow-hidden" aria-hidden="true">
+                      <span className="block h-full rounded-full" style={{ width: `${r.pct}%`, backgroundColor: r.color }} />
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </figure>
         </>
       )}
-      <h2 className="text-base font-semibold mt-6 mb-3">本期流水 · 可编辑</h2>
-      <ExpenseList expenses={expenses.filter(e=>e.date>=rangeStart&&e.date<=rangeEnd).sort((a,b)=>b.date.localeCompare(a.date)||b.createdAt-a.createdAt)}/>
+      <section ref={detailsRef} className="mt-6 scroll-mt-4" aria-label="本期流水">
+        <div className="flex items-start justify-between gap-3 mb-2">
+          <h2 className="text-base font-semibold min-w-0 break-words" style={{ overflowWrap: 'anywhere' }}>
+            {selectedCategory === null ? '本期流水 · 可编辑' : `${selectedCategory} · 本期流水`}
+          </h2>
+          <button type="button" className="secondary shrink-0" aria-pressed={selectedCategory === null} onClick={() => setSelectedCategory(null)}>全部分类</button>
+        </div>
+        <p className="text-xs text-[#8A8474] mb-3" aria-live="polite">{filteredExpenses.length} 笔 · 合计 ¥{filteredTotal.toFixed(2)}</p>
+        {selectedCategory !== null && filteredExpenses.length === 0 ? (
+          <p className="text-sm text-[#8A8474] text-center py-8">本期没有这个分类的消费记录，可切换日期或查看全部分类。</p>
+        ) : <ExpenseList key={JSON.stringify([rangeStart,rangeEnd,selectedCategory])} expenses={filteredExpenses} />}
+      </section>
     </div>
   );
 }
