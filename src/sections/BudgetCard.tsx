@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Wallet, Pencil } from 'lucide-react';
 import { useExpenses } from '@/hooks/useExpenses';
 
@@ -8,24 +8,50 @@ function monthStr(d: Date) {
 
 export default function BudgetCard() {
   const { expenses, budgets, setBudget } = useExpenses();
-  const now = new Date();
+  const [now, setNow] = useState(() => new Date());
   const month = monthStr(now);
   const budget = budgets[month];
   const [editing, setEditing] = useState(false);
   const [input, setInput] = useState('');
 
+  // Refresh even when no bill is changed, including after WebView resumes.
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const refresh = () => {
+      clearTimeout(timer);
+      const current = new Date();
+      setNow(current);
+      const midnight = new Date(current.getFullYear(), current.getMonth(), current.getDate() + 1);
+      timer = setTimeout(refresh, midnight.getTime() - current.getTime() + 50);
+    };
+    const onVisible = () => { if (document.visibilityState === 'visible') refresh(); };
+    refresh();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('pageshow', refresh);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('focus', refresh);
+      window.removeEventListener('pageshow', refresh);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, []);
+
   const stats = useMemo(() => {
     if (!budget) return null;
     const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
     const today = now.getDate();
-    const spent = expenses
+    // Sum in cents so an exactly exhausted budget is not treated as overspent.
+    const budgetCents = Math.round(budget * 100);
+    const spentCents = expenses
       .filter((e) => e.date.startsWith(month))
-      .reduce((s, e) => s + e.amount, 0);
-    const remaining = budget - spent;
-    const dailyAvg = budget / daysInMonth; // 平均每天预算
+      .reduce((s, e) => s + Math.round(e.amount * 100), 0);
+    const remainingCents = budgetCents - spentCents;
+    const spent = spentCents / 100;
+    const remaining = remainingCents / 100;
     const daysLeft = daysInMonth - today + 1; // 含今天
-    const dailyLeft = remaining / daysLeft; // 剩余每天额度
-    return { spent, remaining, dailyAvg, dailyLeft, daysInMonth, daysLeft, over: remaining < 0 };
+    const dailyLeft = Math.max(remaining, 0) / daysLeft;
+    return { spent, remaining, dailyLeft, daysLeft, over: remainingCents < 0, exhausted: remainingCents === 0 };
   }, [budget, expenses, month, now]);
 
   const openEdit = () => {
@@ -52,7 +78,7 @@ export default function BudgetCard() {
   }
 
   return (
-    <div className="rounded-2xl bg-white/80 shadow-[0_2px_20px_rgba(43,42,36,0.06)] p-4 mb-4">
+    <section aria-label="本月预算" className="rounded-2xl bg-white/80 shadow-[0_2px_20px_rgba(43,42,36,0.06)] p-4 mb-4">
       <div className="flex items-center justify-between mb-2">
         <p className="text-sm font-semibold text-[#2B2A24] flex items-center gap-1.5">
           <Wallet size={16} className="text-[#E8927C]" />
@@ -98,12 +124,12 @@ export default function BudgetCard() {
             />
           </div>
 
-          <div className="mt-3 grid grid-cols-2 gap-2 text-center">
-            <div className="rounded-xl bg-[#F9F6EE] py-2.5">
-              <p className="text-[11px] text-[#A8A293]">平均每天预算</p>
-              <p className="text-base font-semibold tabular-nums text-[#2B2A24]">¥{stats.dailyAvg.toFixed(2)}</p>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-center" aria-live="polite" aria-atomic="true">
+            <div className="rounded-xl bg-[#F9F6EE] px-1 py-2.5 min-w-0">
+              <p className="text-[11px] text-[#A8A293]">本月剩余预算</p>
+              <p className="text-base font-semibold tabular-nums text-[#2B2A24]">¥{Math.max(stats.remaining, 0).toFixed(2)}</p>
             </div>
-            <div className="rounded-xl bg-[#F9F6EE] py-2.5">
+            <div className="rounded-xl bg-[#F9F6EE] px-1 py-2.5 min-w-0">
               {stats.over ? (
                 <>
                   <p className="text-[11px] text-[#A8A293]">已超出预算</p>
@@ -117,11 +143,13 @@ export default function BudgetCard() {
               )}
             </div>
           </div>
+          <p className="text-[11px] text-[#A8A293] mt-2">每次记账后自动更新 · 剩余天数含今天</p>
+          {stats.exhausted && <p className="text-xs text-[#D95F4B] mt-2">本月预算已用完</p>}
           {stats.over && (
             <p className="text-xs text-[#D95F4B] mt-2">本月预算已用完，接下来注意控制哦</p>
           )}
         </>
       ) : null}
-    </div>
+    </section>
   );
 }

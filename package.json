@@ -1,7 +1,7 @@
 {
   "name": "ledger-repaired",
   "private": true,
-  "version": "2.0.2",
+  "version": "2.0.3",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test tests/ledger.test.ts",
     "test:mobile": "python tests/run_mobile.py",
-    "test:categories": "node --test tests/category-filter.cjs"
+    "test:categories": "node --test tests/category-filter.cjs",
+    "test:budget": "node --test tests/budget-live.cjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
