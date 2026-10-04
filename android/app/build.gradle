@@ -1,10 +1,59 @@
 plugins { id 'com.android.application' }
+
+def releaseStore = System.getenv('BILL_KEYSTORE')
+def releasePassword = System.getenv('BILL_STORE_PASSWORD')
+def releaseAlias = System.getenv('BILL_KEY_ALIAS')
+def releaseKeyPassword = System.getenv('BILL_KEY_PASSWORD')
+def signedRelease = releaseStore && releasePassword && releaseAlias && releaseKeyPassword
+
 android {
     namespace 'com.jizhang.repaired'
     compileSdk 35
-    defaultConfig { applicationId 'com.jizhang.repaired'; minSdk 24; targetSdk 35; versionCode 203; versionName '2.0.3' }
-    compileOptions { sourceCompatibility JavaVersion.VERSION_1_8; targetCompatibility JavaVersion.VERSION_1_8 }
-    sourceSets { main { assets.srcDirs = ['../generated-assets'] } }
+    buildToolsVersion '35.0.0'
+    defaultConfig {
+        applicationId 'com.jizhang.repaired'
+        minSdk 24
+        targetSdk 35
+        versionCode 300
+        versionName '3.0.0'
+        testInstrumentationRunner 'android.test.InstrumentationTestRunner'
+    }
+    compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+    signingConfigs {
+        release {
+            if (signedRelease) {
+                storeFile file(releaseStore)
+                storePassword releasePassword
+                keyAlias releaseAlias
+                keyPassword releaseKeyPassword
+            }
+        }
+    }
+    buildTypes {
+        debug { applicationIdSuffix '.debug'; versionNameSuffix '-debug' }
+        release { if (signedRelease) signingConfig signingConfigs.release; minifyEnabled false }
+    }
+    sourceSets { main { assets.srcDirs = [layout.buildDirectory.dir('generated/bill-assets')] } }
+    testOptions { unitTests.includeAndroidResources = true }
 }
-tasks.register('copyWeb', Copy) { from '../../dist'; into '../generated-assets/web' }
-tasks.named('preBuild').configure { dependsOn 'copyWeb' }
+
+dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.robolectric:robolectric:4.14.1'
+}
+
+tasks.register('syncBillAssets', Sync) {
+    from('../../dist') { into 'web' }
+    from('../../database/migrations') { into 'migrations' }
+    into layout.buildDirectory.dir('generated/bill-assets')
+    doFirst {
+        if (!file('../../dist/index.html').exists()) throw new GradleException('Run npm run build first.')
+    }
+}
+tasks.named('preBuild').configure { dependsOn 'syncBillAssets' }
+// Do not silently distribute an unsigned "release" under the release build command.
+tasks.configureEach { task ->
+    if (task.name == 'packageRelease') task.doFirst {
+        if (!signedRelease) throw new GradleException('Set BILL_KEYSTORE, BILL_STORE_PASSWORD, BILL_KEY_ALIAS and BILL_KEY_PASSWORD. Signing keys must remain outside the repository.')
+    }
+}
