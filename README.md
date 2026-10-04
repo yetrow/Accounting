@@ -1,169 +1,103 @@
-# 记账小本 · Ledger
+# Bill
 
-一款面向个人日常消费的轻量记账应用，支持支出记录、分类统计、月度预算和数据备份。以简洁的移动端界面呈现账单与消费构成，帮助了解每一笔开销。
+轻量、离线、本地优先的 Android 记账应用。账户、收支、转账、预算和变更历史保存在 Android 系统 SQLite 数据库中，界面由 React 渲染。
 
-应用可在浏览器中运行，也可打包为 Android APK。日常记账无需注册或登录，数据保存在本机，Android 版可离线使用。
+Bill 3.0 是 Ledger 2.0.3 的架构重构。应用名称为 **Bill**，保留 `com.jizhang.repaired` 安装标识用于覆盖升级。不是把 localStorage 换个名字：数据库、领域规则、平台能力和 UI 已分层。
 
-## 主要功能
+## 功能
 
-- **日常记账**：记录金额、分类、日期和备注，支持补记、编辑与删除历史账单。
-- **分类管理与筛选**：自定义消费分类；点击分类可筛选对应流水，并与日期条件组合使用。
-- **消费统计**：按日、周、月查看支出总额与分类占比，支持切换历史统计周期。
-- **交互式环形图**：图中直接显示分类名称和百分比，长名称自动换行、标签避让；点击标注、扇区或分类卡片即可查看对应账单。
-- **月度预算**：设置每月预算，每次消费保存后自动更新已用金额、剩余预算和每天可用额度；编辑、删除、导入账单后同步重算，跨天或返回应用时自动刷新。
-- **数据备份与恢复**：通过 JSON 文件导入、导出账单、分类和预算；导入前预览并校验数据，保留一份导入前快照。
-- **移动端适配**：支持不同屏幕宽度、Android 沉浸式全屏和安全区域，页面切换保留输入状态，并适配系统减少动态效果设置。
+- 快捷金额键盘，记录支出、收入、账户间转账；历史交易可以修正、删除。
+- 账户与期初余额；分类改名、归档保留引用；金额使用整数分，当前支持人民币。
+- 本月预算随支出增删改实时变化。收入和内部转账不消耗预算。
+- 日、周、月统计；环形图配完整分类/百分比标签，点击筛选流水，不隐藏小占比。
+- 修改、删除、导入和恢复与审计记录同事务提交。当前流水是可更新投影，历史审计追加写入，并以 SQLite 触发器禁止更新/删除。
+- Bill JSON 完整备份、Ledger JSON 导入、导入前恢复点；CSV、Beancount 导出。
+- 跟随系统深色模式、字号与减少动效；Android 系统文件选择器，不申请全盘存储权限。
 
-## 使用方式
+## 数据归属与升级
 
-### 记录与查看账单
+**正式 Android 版本**：账本位于应用私有目录 `databases/bill.db`，独立于 WebView 的网页存储。有 schema 版本、迁移、外键、事务、并发版本检查；SQLite 文件可被其他支持 SQLite 的工具读取，但应用私有目录受 Android 沙箱保护。
 
-在「记账」页选择分类、输入金额，按需填写日期和备注后保存。下方「账单流水」支持按今天、昨天、指定日期或全部日期查看；点击账单右侧的编辑按钮，可修改历史记录。
+**浏览器开发版**：使用 IndexedDB 事务实现同一 Repository 契约，不是 Android SQLite 的模拟实机结果。清理站点数据会清空浏览器账本。网页不提供离线缓存服务，正式 Android 安装包内置所有静态资源，完全离线运行。
 
-选择记账分类时，下方流水会同步筛选。点击「全部分类」可清除流水的分类条件，不影响当前待记账分类。
+旧版首次覆盖升级时，从原 `https://app.local/` origin 读取 `ledger.snapshot.v2` 或 v1 分散键，校验后原子迁移。成功后只读新数据库，旧字节保留；失败显示恢复页，不自动写入空账本。仅剩旧版 `recovery` 恢复点时停止初始化，由你在恢复页明确选择恢复，不静默创建空账本。
 
-### 查看消费占比
+覆盖升级必须满足：**同 applicationId + 同签名 + 更高 versionCode**。Bill 3.0.0 的 versionCode 为 300。调试版使用独立标识 `com.jizhang.repaired.debug`，不能自动读取正式版旧数据。更早的 `com.jizhang.app` 是另一个应用，受系统隔离，需要从该版本导出备份后导入；改名不能绕过 Android 沙箱。
 
-在「占比」页切换日、周、月及日期范围。点击图中分类标注、扇区或下方分类卡片，页面会定位到相应流水；再次点击同一分类或选择「全部分类」可取消筛选。
+请勿卸载旧版来解决签名冲突。更改界面名称不需要更换包名。若你安装的旧版本不是这份私钥签名，应继续使用对应私钥构建。
 
-顶部总支出和环形图始终展示整个统计周期的数据，流水区单独显示当前筛选结果。切换统计周期或日期范围时，分类筛选会重置。
+## 开发与测试
 
-### 查看动态预算
-
-设置月预算后，卡片中的「本月剩余预算」等于月预算减去本月全部消费，「每天还能花」按剩余预算除以本月剩余天数计算（含今天）。新增、修改或删除消费记录后立即重算，无需刷新。达到预算时显示已用完，超出时显示超支金额；分类与日期筛选不会改变月预算统计范围。
-
-### 管理数据
-
-通过「记账」页右上角进入数据管理：
-
-- **导出 JSON**：保存当前账单、分类和预算；Android 版通过系统文件选择器指定保存位置。
-- **导入 JSON**：选择备份文件、检查预览后确认导入。导入会覆盖当前数据，单个文件上限为 8 MB。
-- **恢复导入前数据**：恢复上一份导入前快照；恢复操作会与当前数据交换。
-- **沉浸式全屏**：在 Android 版中切换系统栏显示方式。
-
-数据使用浏览器或应用 WebView 的本地存储保存，不提供账号与云端同步。建议定期导出备份；卸载应用或清除应用／浏览器数据前，请先确认备份可用。
-
-## 技术栈
-
-| 部分 | 技术 |
-| --- | --- |
-| 界面与业务逻辑 | React 19、TypeScript |
-| 开发与构建 | Vite 7 |
-| 样式与组件 | Tailwind CSS、Radix UI、Lucide |
-| 统计图表 | Recharts、自定义标签布局 |
-| 数据存储 | localStorage、JSON 备份 |
-| Android 容器 | Java、Android WebView、原生文件读写桥接 |
-| 测试 | Node.js Test Runner、Playwright |
-
-Android 版将前端构建产物内置于 APK，通过 WebView 加载本地页面，并由 Java 容器提供文件导入导出、全屏及安全区域适配。
-
-## 本地开发
-
-准备 Node.js 22.18+（可使用 Node.js 24），在终端执行：
+需要 Node.js **24**、npm；Android 需要 JDK **17**、SDK Platform **35**、Build Tools **35.0.0**。Gradle **8.9** 通过已提交的 Wrapper 安装，分发包校验 SHA-256。Android 支持 7.0+，应保持系统 Android WebView 更新（依赖现代 Chromium 的 Web Crypto、structuredClone、dialog 支持）。
 
 ```bash
-git clone https://github.com/yetrow/Accounting.git
-cd Accounting
 npm ci
+npm run check
 npm run dev
 ```
 
-默认开发地址为 `http://localhost:3000`，以终端输出为准。
+`check` 包含领域规则/真实 SQLite 测试、ESLint、TypeScript 与生产构建。
 
 ```bash
-npm test          # 数据层测试
-npm run build    # 类型检查与生产构建
-npm run preview  # 预览生产构建
-```
-
-构建产物位于 `dist/`，该目录由构建命令生成，不随源码提交。
-
-### 移动浏览器测试
-
-安装 Playwright 和 Chromium 后执行：
-
-```bash
-npm install --no-save playwright
 npx playwright install chromium
 npm run build
-npm run test:categories
-npm run test:budget
-```
-
-完整移动端操作测试还需要 Python 3，建议在 Linux / WSL 中运行：
-
-```bash
 npm run test:mobile
 ```
 
-可通过 `CHROME_PATH` 指定 Chromium 可执行文件。测试覆盖分类筛选、图表标签布局、历史账单编辑及数据导入导出等场景；Android 系统文件选择器与沉浸式效果仍需实机验证。
-
-## Android 打包
-
-当前版本为 **2.0.3**，支持 **Android 7.0 及以上**，应用包名为 `com.jizhang.repaired`。
-
-### 构建环境
-
-除前端依赖外，还需要：
-
-- Python 3
-- JDK 17，确保 `java` 和 `javac` 可用
-- Android SDK Platform 35
-- Android SDK Build Tools 35.0.0
-
-### 签名准备
-
-公开仓库不包含签名私钥。构建脚本要求在项目根目录的 `signing/` 下准备：
-
-| 文件 | 要求 |
-| --- | --- |
-| `ledger-release.jks` | 包含别名为 `ledger` 的签名密钥 |
-| `password.txt` | 签名所需口令，与密钥库及密钥配置匹配 |
-
-已有应用的覆盖升级必须使用原签名材料。独立构建者需自行准备签名密钥；使用不同签名构建的 APK 无法直接覆盖已安装版本。`signing/` 已加入 `.gitignore`，请妥善备份并保持私密。
-
-### 构建命令
-
-先构建前端：
+移动测试覆盖旧数据迁移、记录/修正/删除、预算、转账、JSON 导出/恢复、历史记录、损坏数据门禁、4 种屏宽、深色模式与放大字体。浏览器测试不等同于 Android 实机测试。
 
 ```bash
-npm ci
-npm run build
+cd android
+./gradlew testDebugUnitTest
 ```
 
-Windows PowerShell（SDK 位于默认安装目录时）：
+Android 单元测试使用 Robolectric 检查真实 `BillDatabase` 的 schema、外键、事务回滚、版本冲突与审计保护。
 
-```powershell
-python scripts/build_apk.py --sdk "$env:LOCALAPPDATA\Android\Sdk" --skip-web
-```
+## 一条命令构建 APK
 
-Linux / WSL（需先设置 `ANDROID_HOME`）：
+配置好 `JAVA_HOME`、`ANDROID_HOME` 后，从项目根目录运行：
 
 ```bash
-python scripts/build_apk.py --sdk "$ANDROID_HOME" --skip-web
+npm run android:debug
 ```
 
-脚本使用 Android SDK 命令行工具完成编译、打包、签名和签名校验，无需 Gradle。输出文件为 `release/Ledger-2.0.3.apk`。
+会执行 `npm ci`、测试、前端构建及 Gradle `assembleDebug`。输出 `android/app/build/outputs/apk/debug/app-debug.apk`。Windows 同一命令可用；Gradle 会选择 `gradlew.bat`。
 
-仓库同时提供 Android Studio / Gradle 工程；现有构建验证基于上述命令行脚本。
+正式版签名使用外部环境变量，**私钥和口令不要提交到 Git**：
 
-### 安装与升级
+```bash
+export BILL_KEYSTORE=/absolute/private/path/ledger-release.jks
+export BILL_STORE_PASSWORD='your-store-password'
+export BILL_KEY_ALIAS='your-existing-alias'
+export BILL_KEY_PASSWORD='your-key-password'
+npm run android:release
+```
 
-2.0.x 版本在包名与签名一致时可覆盖升级，无需卸载。旧包名 `com.jizhang.app` 与当前应用的数据相互独立，需要通过 JSON 备份迁移，安装新版本不会自动读取旧应用数据。迁移完成前请保留旧应用。
+PowerShell 使用 `$env:BILL_KEYSTORE = 'C:\private\ledger-release.jks'` 等对应变量。正式版输出 `android/app/build/outputs/apk/release/app-release.apk`。缺少签名变量时正式打包会失败，不会悄悄生成另一个签名或把调试签名当发布签名。
 
-## 项目结构
+CI 在 push / PR 上执行测试和调试 APK 构建；手动 Release workflow 从仓库 secrets 读取 Base64 keystore 与口令，生成签名 APK artifact，**不自动创建公开 Release**。固定依赖、Wrapper 和构建版本提高可复现性，尚不承诺不同主机的 APK 达到 bit 级一致。
 
-| 路径 | 内容 |
-| --- | --- |
-| `src/sections/` | 记账、统计、预算、账单编辑与数据管理界面 |
-| `src/components/` | 环形图与通用 UI 组件 |
-| `src/hooks/` | 账单状态管理与 React Hooks |
-| `src/lib/` | 数据校验、持久化、图表格式与原生桥接 |
-| `android/` | Android WebView 容器与工程配置 |
-| `scripts/build_apk.py` | APK 命令行构建脚本 |
-| `tests/` | 数据层与移动浏览器测试 |
-| `docs/` | 开发记录与验证报告 |
+## 工程结构
 
-## 问题反馈
+```text
+src/domain/       纯 TypeScript：实体、整数金额、规则、统计、迁移解析、交换格式
+src/data/         Repository、SQLite SQL 投影、IndexedDB 事务适配
+src/platform/     原生异步能力协议与文件导入导出
+src/ui/           React 表单、流水、统计、设置；保存成功后才改变界面
+android/          标准 Gradle 工程、原生生命周期和分离的数据库/文件/显示能力
+database/         顺序 SQL 迁移（每行一条完整语句）
+tests/            真实 SQLite 与移动浏览器回归测试
+docs/             架构设计、实施计划、验证记录
+```
 
-欢迎通过 [GitHub Issues](https://github.com/yetrow/Accounting/issues) 反馈问题或提出建议。反馈时请附上应用版本、设备与系统版本、复现步骤及必要截图，并隐藏个人账单等敏感信息。
+运行时依赖只有 React、React DOM、Lucide 图标。没有 UI 模板包、远程 CDN、统计 SDK、账号服务。App 无网络权限，原生桥只对内置本地页面开放；CSP、导航和资源请求均限制本地来源。
+
+## 备份与会计边界
+
+JSON 是完整恢复格式，包含当前账本和审计。导入的源审计按事件 ID 展平去重，仅保存此前未知的事件到 `sourceAudit`，不冒充本机已执行事件；旧账本作为恢复点，反复恢复可交换前后状态。CSV 是普通表格交换，Beancount 为可平衡双分录文本输出；Bill 的内部模型仍是个人收支/转账账本，不宣称完整复式会计系统。
+
+当前数据库不做应用层加密，依赖 Android 设备/沙箱保护；导出的文件不加密。JSON 导出/导入是备份，**不是自动同步**。同步只定义了未来加密传输接口，尚未实现服务器、端到端加密、CRDT、OCR、通知识别或周期账单。
+
+文件导入/导出上限 32 MiB；每类实体最多 100000 条。历史不会自动裁剪，每次导入仍会新增一条导入事件，但不会递归复制已有来源历史；长期大账本的分块备份和分页查询属于后续工作。卸载应用、清除应用数据或丢失设备仍可能丢失账本，建议定期导出。
+
+具体已运行和未运行的验证见 [docs/verification.md](docs/verification.md)。

@@ -1,0 +1,7 @@
+CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+INSERT INTO metadata VALUES ('revision','0'), ('initialized','0');
+CREATE TABLE accounts (id TEXT PRIMARY KEY, name TEXT NOT NULL UNIQUE, opening_minor INTEGER NOT NULL CHECK(typeof(opening_minor)='integer' AND abs(opening_minor)<=999999999), archived INTEGER NOT NULL CHECK(archived IN(0,1)));
+CREATE TABLE categories (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL CHECK(kind IN('expense','income')), color TEXT NOT NULL, archived INTEGER NOT NULL CHECK(archived IN(0,1)), UNIQUE(kind,name));
+CREATE TABLE transactions (id TEXT PRIMARY KEY, kind TEXT NOT NULL CHECK(kind IN('expense','income','transfer')), amount_minor INTEGER NOT NULL CHECK(typeof(amount_minor)='integer' AND amount_minor BETWEEN 1 AND 999999999), account_id TEXT NOT NULL REFERENCES accounts(id), to_account_id TEXT REFERENCES accounts(id), category_id TEXT REFERENCES categories(id), date TEXT NOT NULL, note TEXT NOT NULL, created_at INTEGER NOT NULL, CHECK((kind='transfer' AND to_account_id IS NOT NULL AND to_account_id!=account_id AND category_id IS NULL) OR (kind!='transfer' AND to_account_id IS NULL AND category_id IS NOT NULL)));
+CREATE TABLE budgets (month TEXT PRIMARY KEY, amount_minor INTEGER NOT NULL CHECK(typeof(amount_minor)='integer' AND amount_minor BETWEEN 1 AND 999999999));
+CREATE INDEX transactions_date_kind ON transactions(date,kind);
