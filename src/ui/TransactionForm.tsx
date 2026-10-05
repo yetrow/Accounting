@@ -1,7 +1,8 @@
-import { useRef, useState } from "react";
+import { useRef, useState, type CSSProperties } from "react";
 import { Check, Delete } from "lucide-react";
 import { parseMoney, today, type Kind, type Transaction } from "../domain/book";
 import { useBook } from "./context";
+import { categoryColors } from "./category-colors";
 export function TransactionForm({
   existing,
   onSaved,
@@ -31,6 +32,7 @@ export function TransactionForm({
   const cats = book.categories.filter(
     (c) => c.kind === kind && (!c.archived || c.id === existing?.categoryId),
   );
+  const colors = categoryColors(book.categories);
   const selected = cats.some((c) => c.id === categoryId)
     ? categoryId
     : (cats[0]?.id ?? "");
@@ -119,27 +121,63 @@ export function TransactionForm({
         />
         <span className="currency">CNY</span>
       </label>
-      {kind !== "transfer" ? (
-        <div className="category-picker" aria-label="交易分类">
-          {cats.map((c) => (
-            <button
-              type="button"
-              className={selected === c.id ? "active" : ""}
-              key={c.id}
-              onClick={() => setCategory(c.id)}
-            >
-              <i style={{ background: c.color }} />
-              {c.name}
-            </button>
-          ))}
-          {cats.length === 0 && (
-            <p className="muted">
-              请先在设置中添加{kind === "income" ? "收入" : "支出"}分类。
-            </p>
-          )}
-        </div>
-      ) : (
-        <p className="hint">账户间转账不计入支出，也不占用预算。</p>
+      <div
+        className={`category-note-grid ${kind === "transfer" ? "transfer-note" : ""}`}
+      >
+        {kind !== "transfer" && (
+          <div className="category-field">
+            <span className="field-label">选择分类</span>
+            <div className="category-picker" aria-label="交易分类">
+              {cats.map((c) => (
+                <button
+                  type="button"
+                  className={selected === c.id ? "active" : ""}
+                  key={c.id}
+                  aria-pressed={selected === c.id}
+                  style={
+                    { "--category-color": colors.get(c.id) } as CSSProperties
+                  }
+                  onClick={() => setCategory(c.id)}
+                >
+                  <i style={{ background: colors.get(c.id) }} />
+                  <span>{c.name}</span>
+                  {selected === c.id && (
+                    <Check size={12} className="category-check" />
+                  )}
+                </button>
+              ))}
+              {cats.length === 0 && (
+                <p className="muted">
+                  请先在设置中添加{kind === "income" ? "收入" : "支出"}分类。
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+        <label className="note-field">
+          <span className="field-label">
+            备注 <small>选填</small>
+          </span>
+          <textarea
+            className="note"
+            aria-label="交易备注"
+            placeholder={
+              kind === "income"
+                ? "这笔收入从哪里来？"
+                : kind === "transfer"
+                  ? "记录转账用途"
+                  : "这笔花在了哪里？\n例如：午餐、买书、话费"
+            }
+            maxLength={2000}
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+          />
+        </label>
+      </div>
+      {kind === "transfer" && (
+        <p className="hint transfer-hint">
+          账户间转账不计入支出，也不占用预算。
+        </p>
       )}
       <div className="form-grid">
         <label>
@@ -185,14 +223,6 @@ export function TransactionForm({
           />
         </label>
       </div>
-      <input
-        className="note"
-        aria-label="交易备注"
-        placeholder="添加备注，记住这笔生活"
-        maxLength={2000}
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-      />
       {!existing && (
         <div className="keypad">
           {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"].map(

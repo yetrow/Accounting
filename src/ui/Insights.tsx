@@ -3,6 +3,8 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { categoryTotals, formatMoney, today } from "../domain/book";
 import { useBook } from "./context";
 import { TransactionList } from "./TransactionList";
+import { LabelledDonut } from "./LabelledDonut";
+import { categoryColors } from "./category-colors";
 export function Insights() {
   const { book } = useBook();
   const [period, setPeriod] = useState<"day" | "week" | "month">("month"),
@@ -19,9 +21,13 @@ export function Insights() {
     end.setTime(start.getTime());
     end.setDate(end.getDate() + 6);
   }
+  const colors = categoryColors(book.categories);
   const from = today(start),
     to = today(end),
-    rows = categoryTotals(book, from, to, kind),
+    rows = categoryTotals(book, from, to, kind).map((r) => ({
+      ...r,
+      color: colors.get(r.id)!,
+    })),
     total = rows.reduce((sum, c) => sum + c.amountMinor, 0);
   const [selected, setSelected] = useState<string | null>(null);
   const filtered = book.transactions
@@ -42,10 +48,6 @@ export function Insights() {
     setDate(today(d));
     setSelected(null);
   }
-  const segments = rows.map((row, i) => ({
-    ...row,
-    offset: rows.slice(0, i).reduce((sum, r) => sum + r.percent, 0),
-  }));
   return (
     <div className="content">
       <header className="page-header">
@@ -116,58 +118,13 @@ export function Insights() {
         </div>
         {rows.length ? (
           <>
-            <div className="donut-wrap">
-              <svg
-                className="donut"
-                viewBox="0 0 220 220"
-                role="img"
-                aria-label={rows
-                  .map((r) => `${r.name} ${r.percent.toFixed(1)}%`)
-                  .join("，")}
-              >
-                <circle
-                  cx="110"
-                  cy="110"
-                  r="83"
-                  fill="none"
-                  stroke="var(--surface-alt)"
-                  strokeWidth="23"
-                />
-                {segments.map((s) => (
-                  <circle
-                    key={s.id}
-                    cx="110"
-                    cy="110"
-                    r="83"
-                    fill="none"
-                    stroke={s.color}
-                    strokeWidth={selected === s.id ? 29 : 23}
-                    pathLength="100"
-                    strokeDasharray={`${s.percent} ${100 - s.percent}`}
-                    strokeDashoffset={-s.offset}
-                    transform="rotate(-90 110 110)"
-                  />
-                ))}
-              </svg>
-              <div className="donut-center">
-                <span>本期{kind === "expense" ? "支出" : "收入"}</span>
-                <strong>¥{formatMoney(total)}</strong>
-                <small>{rows.length} 个分类</small>
-              </div>
-            </div>
-            <div className="chart-labels" aria-label="图表分类及百分比">
-              {rows.map((r) => (
-                <button
-                  key={r.id}
-                  className={selected === r.id ? "active" : ""}
-                  onClick={() => setSelected(selected === r.id ? null : r.id)}
-                >
-                  <i style={{ background: r.color }} />
-                  <span>{r.name}</span>
-                  <strong>{r.percent.toFixed(1)}%</strong>
-                </button>
-              ))}
-            </div>
+            <LabelledDonut
+              rows={rows}
+              total={total}
+              kind={kind}
+              selected={selected}
+              onSelect={(id) => setSelected(selected === id ? null : id)}
+            />
             <p className="hint center">点击分类筛选流水 · 再次点击显示全部</p>
           </>
         ) : (

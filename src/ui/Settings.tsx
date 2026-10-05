@@ -143,7 +143,7 @@ export function Settings() {
         </div>
         <div>
           <h2>
-            Bill <span className="version">3.0.0</span>
+            Bill <span className="version">3.0.1</span>
           </h2>
           <p>
             {repository.adapter.name} · {book.transactions.length} 笔交易

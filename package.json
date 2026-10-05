@@ -1,7 +1,7 @@
 {
   "name": "bill",
   "private": true,
-  "version": "3.0.0",
+  "version": "3.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -9,8 +9,8 @@
     "check": "npm test && npm run lint && npm run build",
     "lint": "eslint src tests/*.ts",
     "preview": "vite preview --host 0.0.0.0",
-    "test": "node --test tests/domain.test.ts tests/repository.test.ts",
-    "test:mobile": "node tests/mobile.cjs",
+    "test": "node --test tests/domain.test.ts tests/repository.test.ts tests/chart-layout.test.ts",
+    "test:mobile": "node tests/mobile.cjs && node tests/ui-layout.cjs",
     "android:debug": "node scripts/android-build.mjs debug",
     "android:release": "node scripts/android-build.mjs release",
     "format": "prettier --write src tests/*.ts tests/mobile.cjs scripts/*.mjs",
