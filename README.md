@@ -22,7 +22,7 @@ Bill 3.0 是 Ledger 2.0.3 的架构重构。应用名称为 **Bill**，保留 `c
 
 旧版首次覆盖升级时，从原 `https://app.local/` origin 读取 `ledger.snapshot.v2` 或 v1 分散键，校验后原子迁移。成功后只读新数据库，旧字节保留；失败显示恢复页，不自动写入空账本。仅剩旧版 `recovery` 恢复点时停止初始化，由你在恢复页明确选择恢复，不静默创建空账本。
 
-覆盖升级必须满足：**同 applicationId + 同签名 + 更高 versionCode**。Bill 3.0.0 的 versionCode 为 300。调试版使用独立标识 `com.jizhang.repaired.debug`，不能自动读取正式版旧数据。更早的 `com.jizhang.app` 是另一个应用，受系统隔离，需要从该版本导出备份后导入；改名不能绕过 Android 沙箱。
+覆盖升级必须满足：**同 applicationId + 同签名 + 更高 versionCode**。Bill 3.0.1 的 versionCode 为 301（3.0.0 为 300）。调试版使用独立标识 `com.jizhang.repaired.debug`，不能自动读取正式版旧数据。更早的 `com.jizhang.app` 是另一个应用，受系统隔离，需要从该版本导出备份后导入；改名不能绕过 Android 沙箱。
 
 请勿卸载旧版来解决签名冲突。更改界面名称不需要更换包名。若你安装的旧版本不是这份私钥签名，应继续使用对应私钥构建。
 

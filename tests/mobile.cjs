@@ -83,7 +83,7 @@ const { spawn } = require("node:child_process");
     await page.getByLabel("交易备注").fill("新支出");
     await page.getByRole("button", { name: "记一笔", exact: false }).click();
     await page
-      .locator(".page:not([hidden])")
+      .locator(".page:not([hidden]) .transactions")
       .getByText("新支出", { exact: true })
       .waitFor();
     assert.equal(
@@ -106,7 +106,7 @@ const { spawn } = require("node:child_process");
     );
     await page.reload();
     await page
-      .locator(".page:not([hidden])")
+      .locator(".page:not([hidden]) .transactions")
       .getByText("新支出", { exact: true })
       .waitFor();
     await page
@@ -115,7 +115,7 @@ const { spawn } = require("node:child_process");
       .click();
     await page.getByRole("button", { name: "确认删除", exact: true }).click();
     await page
-      .locator(".page:not([hidden])")
+      .locator(".page:not([hidden]) .transactions")
       .getByText("新支出", { exact: true })
       .waitFor({ state: "hidden" });
     assert.equal(

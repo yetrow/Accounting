@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowUpRight, ShieldCheck, Pencil } from "lucide-react";
+import { ShieldCheck, Pencil } from "lucide-react";
 import { budgetSummary, formatMoney, parseMoney, today } from "../domain/book";
 import { useBook } from "./context";
 import { TransactionForm } from "./TransactionForm";
@@ -38,7 +38,7 @@ export function Home() {
     }
   }
   return (
-    <div className="content">
+    <div className="content home-content">
       <header className="page-header">
         <div className="wordmark">
           Bill<span>·</span>
@@ -65,9 +65,6 @@ export function Home() {
             <small>¥</small>
             {formatMoney(todaySpent)}
           </p>
-        </div>
-        <div className="summary-symbol">
-          <ArrowUpRight size={25} />
         </div>
         <div className="summary-bottom">
           <span>本月累计支出</span>
