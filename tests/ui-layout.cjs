@@ -176,13 +176,19 @@ const { spawn } = require("node:child_process");
     );
     await home.getByLabel("金额（元）", { exact: true }).fill("15");
     await home.getByRole("button", { name: "记一笔", exact: false }).click();
-    await home.getByText("晚饭：面条 + 牛奶", { exact: true }).waitFor();
+    await home
+      .locator(".transactions")
+      .getByText("晚饭：面条 + 牛奶", { exact: true })
+      .waitFor();
     assert.equal(
       await page.getByTestId("budget-remaining").innerText(),
       "¥859.53",
     );
     await page.reload();
-    await home.getByText("晚饭：面条 + 牛奶", { exact: true }).waitFor();
+    await home
+      .locator(".transactions")
+      .getByText("晚饭：面条 + 牛奶", { exact: true })
+      .waitFor();
     assert.deepEqual(errors, []);
     console.log(
       "PASS compact summary, adjacent note, distinct category fills, 7 connected chart labels, 4 widths, category filtering, saved note and live budget",
