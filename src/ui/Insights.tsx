@@ -7,13 +7,18 @@ import { LabelledDonut } from "./LabelledDonut";
 import { categoryColors } from "./category-colors";
 export function Insights() {
   const { book } = useBook();
-  const [period, setPeriod] = useState<"day" | "week" | "month">("month"),
+  const [period, setPeriod] = useState<"day" | "week" | "month" | "year">(
+      "month",
+    ),
     [date, setDate] = useState(today()),
     [kind, setKind] = useState<"expense" | "income">("expense");
   const cursor = new Date(`${date}T12:00:00`),
     start = new Date(cursor),
     end = new Date(cursor);
-  if (period === "month") {
+  if (period === "year") {
+    start.setMonth(0, 1);
+    end.setMonth(11, 31);
+  } else if (period === "month") {
     start.setDate(1);
     end.setMonth(end.getMonth() + 1, 0);
   } else if (period === "week") {
@@ -41,7 +46,10 @@ export function Insights() {
     .sort((a, b) => b.date.localeCompare(a.date) || b.createdAt - a.createdAt);
   function move(step: number) {
     const d = new Date(cursor);
-    if (period === "month") {
+    if (period === "year") {
+      d.setMonth(0, 1);
+      d.setFullYear(d.getFullYear() + step);
+    } else if (period === "month") {
       d.setDate(1);
       d.setMonth(d.getMonth() + step);
     } else d.setDate(d.getDate() + step * (period === "week" ? 7 : 1));
@@ -57,7 +65,7 @@ export function Insights() {
         </div>
       </header>
       <div className="segmented period-tabs">
-        {(["day", "week", "month"] as const).map((p) => (
+        {(["day", "week", "month", "year"] as const).map((p) => (
           <button
             key={p}
             className={period === p ? "selected" : ""}
@@ -66,7 +74,7 @@ export function Insights() {
               setSelected(null);
             }}
           >
-            {{ day: "日", week: "周", month: "月" }[p]}
+            {{ day: "日", week: "周", month: "月", year: "年" }[p]}
           </button>
         ))}
       </div>
@@ -76,11 +84,13 @@ export function Insights() {
         </button>
         <div>
           <strong>
-            {period === "month"
-              ? `${start.getFullYear()} 年 ${start.getMonth() + 1} 月`
-              : from === to
-                ? from
-                : `${from} 至 ${to}`}
+            {period === "year"
+              ? `${start.getFullYear()} 年`
+              : period === "month"
+                ? `${start.getFullYear()} 年 ${start.getMonth() + 1} 月`
+                : from === to
+                  ? from
+                  : `${from} 至 ${to}`}
           </strong>
           <button
             onClick={() => {
