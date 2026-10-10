@@ -87,7 +87,6 @@ src/ui/           React 表单、流水、统计、设置；保存成功后才�
 android/          标准 Gradle 工程、原生生命周期和分离的数据库/文件/显示能力
 database/         顺序 SQL 迁移（每行一条完整语句）
 tests/            真实 SQLite 与移动浏览器回归测试
-docs/             架构设计、实施计划、验证记录
 ```
 
 运行时依赖只有 React、React DOM、Lucide 图标。没有 UI 模板包、远程 CDN、统计 SDK、账号服务。App 无网络权限，原生桥只对内置本地页面开放；CSP、导航和资源请求均限制本地来源。
@@ -100,4 +99,22 @@ JSON 是完整恢复格式，包含当前账本和审计。导入的源审计按
 
 文件导入/导出上限 32 MiB；每类实体最多 100000 条。历史不会自动裁剪，每次导入仍会新增一条导入事件，但不会递归复制已有来源历史；长期大账本的分块备份和分页查询属于后续工作。卸载应用、清除应用数据或丢失设备仍可能丢失账本，建议定期导出。
 
-具体已运行和未运行的验证见 [docs/verification.md](docs/verification.md)。
+测试截图输出到 `test-results/screenshots/`，该目录不提交到 Git。
+
+## 提交前检查
+
+源码、测试、数据库迁移、依赖锁文件、Gradle Wrapper 和 GitHub Actions 配置需要保留。开发过程记录、测试报告、构建产物、本机配置、账本备份和签名材料不应提交。
+
+每次提交前运行：
+
+```bash
+git status --short
+git diff --stat
+git diff --cached --name-status
+git diff --cached
+git ls-files -ci --exclude-standard
+```
+
+先查看待提交的文件名，再查看具体改动；最后一条命令检查已被跟踪但命中忽略规则的文件，正常情况下应无输出。`.gitignore` 不会自动移除已经提交的文件。误跟踪时可用 `git rm --cached -- 文件路径` 取消跟踪并保留本机文件。
+
+密钥或真实口令如果已经提交，必须立即撤销或更换；仅删除最新版本不能清除 Git 历史。普通开发记录的清理使用正常提交，历史提交仍可查看。

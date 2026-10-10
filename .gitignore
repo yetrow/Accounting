@@ -1,15 +1,56 @@
+# Dependencies and generated web files
 node_modules/
 dist/
 *.tsbuildinfo
+
+# Test output and caches
+/test-results/
+/playwright-report/
+/coverage/
+.cache/
+
+# Local development records
+.superpowers/
+.codex/
+/docs/superpowers/
+/docs/screenshots/
+/docs/progress.md
+/docs/verification*.md
+
+# Machine-specific files
+.idea/
 .DS_Store
+Thumbs.db
 *.log
+*.tmp
+*.swp
 .env*
+
+# Signing material and packaged releases
 signing/
 *.jks
 *.keystore
-release/
-android/.gradle/
+*.pem
+*.key
+*.p12
+*.pfx
+*.apk
+*.aab
+/release/
+
+# Personal databases and backups (SQL migrations remain tracked)
+*.db
+*.db-*
+*.sqlite
+*.sqlite-*
+*.sqlite3
+*.sqlite3-*
+/backups/
+
+# Android generated files and local SDK settings
+.gradle/
 android/**/build/
 android/local.properties
 android/generated-assets/
-.superpowers/
+android/.cxx/
+android/.externalNativeBuild/

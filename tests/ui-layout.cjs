@@ -111,10 +111,10 @@ const { spawn } = require("node:child_process");
       fills.length,
       "every category has a distinct fill",
     );
-    fs.mkdirSync("docs/screenshots", { recursive: true });
-    await page.screenshot({ path: "docs/screenshots/bill-home.png" });
+    fs.mkdirSync("test-results/screenshots", { recursive: true });
+    await page.screenshot({ path: "test-results/screenshots/bill-home.png" });
     await page.emulateMedia({ colorScheme: "dark" });
-    await page.screenshot({ path: "docs/screenshots/bill-dark.png" });
+    await page.screenshot({ path: "test-results/screenshots/bill-dark.png" });
     await page.emulateMedia({ colorScheme: "light" });
     await page.getByRole("button", { name: "统计", exact: true }).click();
     await page.locator(".donut-label").first().waitFor();
@@ -153,7 +153,7 @@ const { spawn } = require("node:child_process");
     }
     await page.setViewportSize({ width: 393, height: 1100 });
     await page.waitForTimeout(100);
-    await page.screenshot({ path: "docs/screenshots/bill-insights.png" });
+    await page.screenshot({ path: "test-results/screenshots/bill-insights.png" });
     await page.getByRole("button", { name: "餐饮 32.7%", exact: true }).click();
     assert.equal(
       await page.locator(".page:not([hidden]) .transactions > li").count(),

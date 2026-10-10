@@ -157,8 +157,8 @@ const { spawn } = require("node:child_process");
       );
     }
     await page.setViewportSize({ width: 393, height: 852 });
-    fs.mkdirSync("docs/screenshots", { recursive: true });
-    await page.screenshot({ path: "docs/screenshots/bill-insights.png" });
+    fs.mkdirSync("test-results/screenshots", { recursive: true });
+    await page.screenshot({ path: "test-results/screenshots/bill-insights.png" });
     await page.getByRole("button", { name: "设置", exact: true }).click();
     const [download] = await Promise.all([
       page.waitForEvent("download"),
@@ -212,9 +212,9 @@ const { spawn } = require("node:child_process");
     await page
       .locator(".page:not([hidden])")
       .evaluate((el) => (el.scrollTop = 0));
-    await page.screenshot({ path: "docs/screenshots/bill-home.png" });
+    await page.screenshot({ path: "test-results/screenshots/bill-home.png" });
     await page.emulateMedia({ colorScheme: "dark" });
-    await page.screenshot({ path: "docs/screenshots/bill-dark.png" });
+    await page.screenshot({ path: "test-results/screenshots/bill-dark.png" });
     await page.evaluate(() => {
       document.documentElement.style.fontSize = "24px";
     });
